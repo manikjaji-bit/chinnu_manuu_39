@@ -149,6 +149,15 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab, onOpenA
           {/* Right Section: Persona Switcher, Health Pill, Notifications, User */}
           <div className="flex items-center space-x-3">
             
+            {/* Supabase Cloud Storage Pill */}
+            <div 
+              className="hidden lg:flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-emerald-950/40 border border-emerald-800/40 text-xs"
+              title="Supabase Cloud Storage & Auth Active"
+            >
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-emerald-400 font-medium text-[11px]">Supabase Cloud</span>
+            </div>
+
             {/* Campus Health Pill */}
             {healthScore && (
               <div 

@@ -7,6 +7,7 @@ import schemas
 from auth import require_admin
 from services.predictive_service import calculate_campus_health_score, detect_recurring_problems
 from services.notification_service import create_notification, log_activity
+from services.supabase_service import supabase_service
 
 router = APIRouter(prefix="/api/admin", tags=["Administrator"])
 
@@ -47,8 +48,17 @@ def get_admin_overview(db: Session = Depends(get_db)):
         "campus_health_score": health["score"],
         "campus_health_label": health["status_label"],
         "avg_resolution_hours": health["avg_resolution_hours"],
-        "recurring_hotspots_count": len(hotspots)
+        "recurring_hotspots_count": len(hotspots),
+        "supabase": supabase_service.get_status()
     }
+
+
+@router.get("/supabase-status")
+def get_supabase_status():
+    """
+    Returns live connectivity and health metrics for the Supabase cloud integration.
+    """
+    return supabase_service.get_status()
 
 
 @router.post("/override-assignment/{complaint_id}", response_model=schemas.ComplaintResponse)

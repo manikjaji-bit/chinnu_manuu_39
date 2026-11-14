@@ -20,7 +20,11 @@ from services import (
 
 def run_direct_tests():
     print("Running Direct In-Memory Integration Tests for Campus Guardian...")
+    from database import engine, Base
+    from seed_data import seed_database
+    Base.metadata.create_all(bind=engine)
     db = SessionLocal()
+    seed_database(db)
 
     try:
         # 1. Test Demo Authentication

@@ -14,6 +14,7 @@ from services.routing_service import auto_assign_complaint
 from services.verification_service import verify_resolution
 from services.predictive_service import check_for_duplicates
 from services.notification_service import create_notification, notify_admins, log_activity
+from services.supabase_service import supabase_service
 
 router = APIRouter(prefix="/api/complaints", tags=["Complaints"])
 
@@ -23,16 +24,25 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 @router.post("/upload-photo")
 async def upload_photo(file: UploadFile = File(...)):
     """
-    Saves an uploaded photo to the local uploads directory and returns its accessible URL.
+    Saves an uploaded photo locally and synchronizes to Supabase Cloud Storage.
     """
     ext = os.path.splitext(file.filename)[1] or ".jpg"
     filename = f"{uuid.uuid4().hex}{ext}"
     filepath = os.path.join(UPLOAD_DIR, filename)
 
+    content = await file.read()
     with open(filepath, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        buffer.write(content)
 
-    return {"url": f"/uploads/{filename}", "filename": filename}
+    # Cloud upload to Supabase Storage
+    supabase_url = supabase_service.upload_file(content, filename, content_type=file.content_type or "image/jpeg")
+    url = supabase_url if supabase_url else f"/uploads/{filename}"
+
+    return {
+        "url": url,
+        "filename": filename,
+        "cloud_storage": "supabase" if supabase_url else "local"
+    }
 
 
 @router.post("/submit", response_model=schemas.ComplaintResponse)
@@ -65,7 +75,10 @@ async def submit_complaint(
         filepath = os.path.join(UPLOAD_DIR, filename)
         with open(filepath, "wb") as f:
             f.write(image_bytes)
-        final_image_url = f"/uploads/{filename}"
+        
+        # Sync to Supabase Storage
+        supabase_url = supabase_service.upload_file(image_bytes, filename, content_type=image_file.content_type or "image/jpeg")
+        final_image_url = supabase_url if supabase_url else f"/uploads/{filename}"
 
     # 2. Check Building & Duplicate Detection (FEATURE D)
     building = db.query(models.Building).filter(models.Building.id == building_id).first()

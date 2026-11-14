@@ -8,6 +8,7 @@ from database import get_db
 import schemas
 from services.ai_service import analyze_complaint_image
 from services.assistant_service import ask_campus_assistant
+from services.supabase_service import supabase_service
 
 router = APIRouter(prefix="/api/ai", tags=["AI Intelligence Engine"])
 
@@ -37,7 +38,10 @@ async def scan_image_preview(
         filepath = os.path.join(UPLOAD_DIR, filename)
         with open(filepath, "wb") as f:
             f.write(image_bytes)
-        saved_url = f"/uploads/{filename}"
+        
+        # Upload preview to Supabase Storage
+        supabase_url = supabase_service.upload_file(image_bytes, filename, content_type=image.content_type or "image/jpeg")
+        saved_url = supabase_url if supabase_url else f"/uploads/{filename}"
 
     result = analyze_complaint_image(
         image_bytes=image_bytes,
