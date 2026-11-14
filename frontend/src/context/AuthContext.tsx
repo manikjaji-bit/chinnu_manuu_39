@@ -103,9 +103,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('cg_token', data.access_token);
         setToken(data.access_token);
         setUser(data.user);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'Demo login failed');
       }
     } catch (err) {
       console.error('Demo login error:', err);
+      throw err;
     } finally {
       setLoading(false);
     }
