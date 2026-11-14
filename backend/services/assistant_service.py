@@ -1,3 +1,4 @@
+import os
 import re
 from typing import Dict, Any, List
 from sqlalchemy.orm import Session
@@ -149,8 +150,42 @@ def ask_campus_assistant(query: str, db: Session) -> Dict[str, Any]:
                 ]
             }
 
-    # 6. Default / General Executive Overview
+    # 6. Gemini-powered dynamic answering for general questions
+    api_key = os.getenv("GEMINI_API_KEY")
     health = calculate_campus_health_score(db)
+
+    if api_key:
+        try:
+            import requests
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={api_key}"
+            sys_info = (
+                f"You are the Campus Guardian AI Executive Assistant.\n"
+                f"Current Campus Health: {health['score']}/100 ({health['status_label']}), "
+                f"Open tickets: {health['total_open_complaints']}, "
+                f"Critical incidents: {health['total_critical_incidents']}, "
+                f"Average turnaround: {health['avg_resolution_hours']}h, "
+                f"Recurring hotspot zones: {health['recurring_hotspot_count']}.\n"
+                f"Answer the user query concisely, accurately, and professionally with markdown bullets."
+            )
+            payload = {
+                "contents": [{"parts": [{"text": sys_info + f"\nUser Query: {query}"}]}],
+                "generationConfig": {"temperature": 0.3}
+            }
+            res = requests.post(url, json=payload, timeout=12)
+            if res.status_code == 200:
+                answer_text = res.json()["candidates"][0]["content"]["parts"][0]["text"]
+                return {
+                    "query": query,
+                    "answer": answer_text,
+                    "action_items": [
+                        "Log executive action in facility audit ledger",
+                        "Monitor real-time resolution telemetry"
+                    ]
+                }
+        except Exception as e:
+            print(f"[Assistant Service] Gemini dynamic Q&A fallback: {e}")
+
+    # Default / General Executive Overview Fallback
     answer = (
         f"Campus Guardian Assistant telemetry summary:\n\n"
         f"- **Campus Health Score**: **{health['score']}/100** ({health['status_label']})\n"

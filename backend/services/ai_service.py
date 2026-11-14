@@ -4,7 +4,8 @@ import base64
 import requests
 from typing import Dict, Any, Optional
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+def get_gemini_api_key() -> str:
+    return os.getenv("GEMINI_API_KEY", "")
 
 # Category mapping to departments
 CATEGORY_TO_DEPT = {
@@ -32,9 +33,10 @@ def analyze_complaint_image(
     Performs AI vision analysis using Gemini Vision API if key is configured,
     or falls back to a transparent, deterministic heuristic intelligence engine.
     """
-    if GEMINI_API_KEY and image_bytes:
+    api_key = get_gemini_api_key()
+    if api_key and image_bytes:
         try:
-            return call_gemini_vision(image_bytes, title, description, category, building_name, room)
+            return call_gemini_vision(api_key, image_bytes, title, description, category, building_name, room)
         except Exception as e:
             print(f"[AI Service] Gemini API call failed, switching to demo mode: {e}")
 
@@ -43,6 +45,7 @@ def analyze_complaint_image(
 
 
 def call_gemini_vision(
+    api_key: str,
     image_bytes: bytes,
     title: str,
     description: str,
@@ -53,7 +56,7 @@ def call_gemini_vision(
     """
     Direct Gemini Vision API call returning structured JSON.
     """
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={api_key}"
     
     encoded_image = base64.b64encode(image_bytes).decode("utf-8")
     

@@ -5,7 +5,8 @@ import requests
 from typing import Dict, Any, Optional
 import models
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+def get_gemini_api_key() -> str:
+    return os.getenv("GEMINI_API_KEY", "")
 
 def verify_resolution(
     complaint: models.Complaint,
@@ -22,9 +23,10 @@ def verify_resolution(
     # If safety-critical, prompt policy: never auto-declare 100% safe without human inspection
     is_safety_critical = (complaint.severity == "Critical") or (complaint.priority_score >= 85)
 
-    if GEMINI_API_KEY and before_image_url and after_image_url:
+    api_key = get_gemini_api_key()
+    if api_key and before_image_url and after_image_url:
         try:
-            return call_gemini_verification(complaint, before_image_url, after_image_url, maintenance_notes, parts_replaced, is_safety_critical)
+            return call_gemini_verification(api_key, complaint, before_image_url, after_image_url, maintenance_notes, parts_replaced, is_safety_critical)
         except Exception as e:
             print(f"[Verification Service] Gemini verification failed, falling back to heuristic: {e}")
 
@@ -32,6 +34,7 @@ def verify_resolution(
 
 
 def call_gemini_verification(
+    api_key: str,
     complaint: models.Complaint,
     before_url: str,
     after_url: str,
@@ -42,7 +45,7 @@ def call_gemini_verification(
     """
     Gemini dual-image comparative reasoning prompt.
     """
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={api_key}"
 
     prompt = f"""
     You are an AI Quality Assurance & Building Safety Inspector.
