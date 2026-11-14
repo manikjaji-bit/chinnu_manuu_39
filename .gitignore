@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+tools/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Database & Environment
+campus_guardian.db
+*.sqlite3
+.env
+.env.local
+
+# Vite / React build outputs
+dist/
+dist-ssr/
+*.local
+
+# Logs & temp
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
