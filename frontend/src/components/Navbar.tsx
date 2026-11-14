@@ -294,6 +294,13 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab, onOpenA
                   <p className="text-xs font-medium text-white leading-tight">{user.full_name}</p>
                   <p className="text-[10px] text-cyan-400 capitalize">{user.role}</p>
                 </div>
+                <button
+                  onClick={logout}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-950/30 border border-slate-800 transition-all ml-1"
+                  title="Sign Out / Switch Account"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
               </div>
             )}
 

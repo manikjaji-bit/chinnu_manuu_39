@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
+import { LoginPortal } from './components/LoginPortal';
 import { StudentDashboard } from './pages/StudentDashboard';
 import { MaintenanceDashboard } from './pages/MaintenanceDashboard';
 import { AdminDashboard } from './pages/AdminDashboard';
@@ -10,9 +11,28 @@ import { AIAssistantModal } from './components/AIAssistantModal';
 
 
 const MainApp: React.FC = () => {
-  const { role, user } = useAuth();
+  const { role, user, loading } = useAuth();
   const [currentTab, setCurrentTab] = useState<'dashboard' | 'map' | 'analytics'>('dashboard');
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#080d1a] flex flex-col items-center justify-center space-y-4">
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-400 p-[1.5px] animate-spin">
+          <div className="w-full h-full bg-slate-950 rounded-[14px]"></div>
+        </div>
+        <p className="text-xs text-cyan-400 font-mono tracking-widest uppercase animate-pulse">
+          Initializing Campus Guardian Security...
+        </p>
+      </div>
+    );
+  }
+
+  // If no authenticated user, present the Login & Admin Creation Portal
+  if (!user) {
+    return <LoginPortal />;
+  }
 
   return (
     <div className="min-h-screen bg-[#080d1a] text-slate-100 flex flex-col antialiased selection:bg-cyan-500/30 selection:text-cyan-200">

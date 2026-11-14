@@ -8,6 +8,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  register: (fullName: string, email: string, password: string, role: UserRole, departmentId?: number) => Promise<void>;
   demoLogin: (role: UserRole) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -29,12 +30,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const userData = await res.json();
         setUser(userData);
       } else {
-        // Fallback to demo student login
-        await demoLogin('student');
+        localStorage.removeItem('cg_token');
+        setToken(null);
+        setUser(null);
       }
     } catch (err) {
       console.error('Failed to fetch user:', err);
-      await demoLogin('student');
+      localStorage.removeItem('cg_token');
+      setToken(null);
+      setUser(null);
     } finally {
       setLoading(false);
     }
@@ -49,7 +53,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         body: JSON.stringify({ email, password }),
       });
       if (!res.ok) {
-        throw new Error('Invalid credentials');
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'Invalid email or password');
+      }
+      const data = await res.json();
+      localStorage.setItem('cg_token', data.access_token);
+      setToken(data.access_token);
+      setUser(data.user);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const register = async (fullName: string, email: string, password: string, role: UserRole, departmentId?: number) => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: fullName,
+          email,
+          password,
+          role,
+          department_id: departmentId || null
+        })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'Registration failed');
       }
       const data = await res.json();
       localStorage.setItem('cg_token', data.access_token);
@@ -95,8 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (token) {
       fetchCurrentUser(token);
     } else {
-      // Default to student demo user for instant hackathon review
-      demoLogin('student');
+      setLoading(false);
     }
   }, []);
 
@@ -111,6 +142,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!user,
         loading,
         login,
+        register,
         demoLogin,
         logout,
         refreshUser,

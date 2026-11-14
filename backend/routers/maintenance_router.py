@@ -23,16 +23,7 @@ def get_kanban_tasks(
     """
     query = db.query(models.Complaint)
     
-    # If not admin, filter to tasks assigned to this technician or in their department
-    if current_user.role == "maintenance":
-        if current_user.department_id:
-            query = query.filter(
-                (models.Complaint.assigned_technician_id == current_user.id) |
-                (models.Complaint.department_id == current_user.department_id)
-            )
-        else:
-            query = query.filter(models.Complaint.assigned_technician_id == current_user.id)
-
+    # Return all campus tasks organized into Kanban stages so staff has full visibility of work orders
     complaints = query.order_by(models.Complaint.priority_score.desc()).all()
 
     kanban = {

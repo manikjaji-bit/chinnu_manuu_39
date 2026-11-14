@@ -43,12 +43,23 @@ export const MaintenanceDashboard: React.FC = () => {
   const [parts, setParts] = useState('');
   const [hours, setHours] = useState('1.5');
   const [submittingEvidence, setSubmittingEvidence] = useState(false);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const getHeaders = (contentType = 'application/json') => {
+    const token = localStorage.getItem('cg_token');
+    const h: Record<string, string> = {};
+    if (contentType) h['Content-Type'] = contentType;
+    if (token) h['Authorization'] = `Bearer ${token}`;
+    return h;
+  };
+
   const fetchTasks = async () => {
     try {
-      const res = await fetch('/api/maintenance/kanban');
+      const res = await fetch('/api/maintenance/kanban', {
+        headers: getHeaders('')
+      });
       if (res.ok) {
         const data = await res.json();
         setKanban(data);
@@ -67,13 +78,20 @@ export const MaintenanceDashboard: React.FC = () => {
   const handleAcceptTask = async (complaintId: number) => {
     try {
       const res = await fetch(`/api/maintenance/accept/${complaintId}`, {
-        method: 'POST'
+        method: 'POST',
+        headers: getHeaders()
       });
       if (res.ok) {
+        setToastMsg(`Work Order #${complaintId} accepted! Status moved to "In Progress".`);
+        setTimeout(() => setToastMsg(null), 4000);
         fetchTasks();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(`Failed to accept task: ${err.detail || 'Permission denied'}`);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      alert(`Network error accepting task: ${e.message}`);
     }
   };
 
@@ -99,6 +117,7 @@ export const MaintenanceDashboard: React.FC = () => {
         uploadData.append('file', afterImageFile);
         const upRes = await fetch('/api/complaints/upload-photo', {
           method: 'POST',
+          headers: getHeaders(''),
           body: uploadData
         });
         if (upRes.ok) {
@@ -109,7 +128,7 @@ export const MaintenanceDashboard: React.FC = () => {
 
       const res = await fetch(`/api/complaints/${selectedTaskForEvidence.id}/upload-evidence`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders(),
         body: JSON.stringify({
           after_image_url: finalAfterUrl,
           maintenance_notes: notes,
@@ -119,15 +138,21 @@ export const MaintenanceDashboard: React.FC = () => {
       });
 
       if (res.ok) {
+        setToastMsg(`Resolution evidence submitted for #${selectedTaskForEvidence.id}! AI Verification initiated.`);
+        setTimeout(() => setToastMsg(null), 4000);
         setSelectedTaskForEvidence(null);
         setNotes('');
         setParts('');
         setAfterImageFile(null);
         setAfterImagePreview(null);
         fetchTasks();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(`Evidence submission failed: ${err.detail || 'Server error'}`);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      alert(`Network error submitting evidence: ${e.message}`);
     } finally {
       setSubmittingEvidence(false);
     }
@@ -143,6 +168,17 @@ export const MaintenanceDashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       
+      {/* Toast Notification */}
+      {toastMsg && (
+        <div className="p-3.5 rounded-2xl bg-emerald-950/90 border border-emerald-500/80 text-emerald-200 text-xs font-semibold flex items-center justify-between shadow-lg shadow-emerald-950/50">
+          <span className="flex items-center space-x-2">
+            <span>✓</span>
+            <span>{toastMsg}</span>
+          </span>
+          <button onClick={() => setToastMsg(null)} className="text-emerald-400 hover:text-white font-bold ml-4">✕</button>
+        </div>
+      )}
+
       {/* Top Banner */}
       <div className="glass-panel rounded-3xl p-6 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
