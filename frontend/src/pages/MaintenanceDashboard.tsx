@@ -17,6 +17,7 @@ import {
 import { Complaint, ResolutionEvidence } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { ResolutionVerificationModal } from '../components/ResolutionVerificationModal';
+import { getAuthHeaders } from '../utils/api';
 
 export const MaintenanceDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -47,12 +48,8 @@ export const MaintenanceDashboard: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const getHeaders = (contentType = 'application/json') => {
-    const token = localStorage.getItem('cg_token');
-    const h: Record<string, string> = {};
-    if (contentType) h['Content-Type'] = contentType;
-    if (token) h['Authorization'] = `Bearer ${token}`;
-    return h;
+  const getHeaders = (contentType: string | null = 'application/json') => {
+    return getAuthHeaders(contentType);
   };
 
   const fetchTasks = async () => {

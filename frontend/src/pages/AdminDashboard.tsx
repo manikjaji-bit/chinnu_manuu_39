@@ -19,6 +19,7 @@ import {
 import { CampusHealthScore, Complaint, RecurringHotspot, ResourceSuggestion } from '../types';
 import { CampusHealthCard } from '../components/CampusHealthCard';
 import { ResolutionVerificationModal } from '../components/ResolutionVerificationModal';
+import { getAuthHeaders } from '../utils/api';
 
 export const AdminDashboard: React.FC = () => {
   const [overview, setOverview] = useState<any>(null);
@@ -40,14 +41,15 @@ export const AdminDashboard: React.FC = () => {
 
   const fetchAdminData = async () => {
     try {
+      const headers = getAuthHeaders();
       const [ovRes, hsRes, spotRes, resSugRes, logsRes, compsRes, deptRes] = await Promise.all([
-        fetch('/api/admin/overview'),
-        fetch('/api/admin/health-score'),
-        fetch('/api/predictive/recurring-hotspots'),
-        fetch('/api/admin/resource-suggestions'),
-        fetch('/api/admin/audit-logs'),
-        fetch('/api/complaints/'),
-        fetch('/api/campus/departments')
+        fetch('/api/admin/overview', { headers }),
+        fetch('/api/admin/health-score', { headers }),
+        fetch('/api/predictive/recurring-hotspots', { headers }),
+        fetch('/api/admin/resource-suggestions', { headers }),
+        fetch('/api/admin/audit-logs', { headers }),
+        fetch('/api/complaints/', { headers }),
+        fetch('/api/campus/departments', { headers })
       ]);
 
       if (ovRes.ok) setOverview(await ovRes.json());

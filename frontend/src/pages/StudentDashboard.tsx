@@ -18,6 +18,7 @@ import { ReportProblemModal } from '../components/ReportProblemModal';
 import { ResolutionVerificationModal } from '../components/ResolutionVerificationModal';
 import { AIAnalysisCard } from '../components/AIAnalysisCard';
 import { GamificationLeaderboard } from '../components/GamificationLeaderboard';
+import { getAuthHeaders } from '../utils/api';
 
 export const StudentDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -30,7 +31,9 @@ export const StudentDashboard: React.FC = () => {
 
   const fetchMyComplaints = async () => {
     try {
-      const res = await fetch('/api/complaints/?mine_only=true');
+      const res = await fetch('/api/complaints/?mine_only=true', {
+        headers: getAuthHeaders()
+      });
       if (res.ok) {
         const data = await res.json();
         setComplaints(data);

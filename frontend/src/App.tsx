@@ -50,9 +50,10 @@ const MainApp: React.FC = () => {
         {currentTab === 'analytics' && <PredictiveAnalytics />}
         {currentTab === 'dashboard' && (
           <>
-            {role === 'student' && <StudentDashboard />}
-            {role === 'maintenance' && <MaintenanceDashboard />}
             {role === 'admin' && <AdminDashboard />}
+            {role === 'maintenance' && <MaintenanceDashboard />}
+            {role === 'student' && <StudentDashboard />}
+            {!['admin', 'maintenance', 'student'].includes(role) && <StudentDashboard />}
           </>
         )}
       </main>

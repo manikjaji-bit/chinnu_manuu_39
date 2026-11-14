@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   CalendarCheck2
 } from 'lucide-react';
+import { getAuthHeaders } from '../utils/api';
 
 interface AIAssistantModalProps {
   isOpen: boolean;
@@ -70,7 +71,7 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({ isOpen, onCl
     try {
       const res = await fetch('/api/ai/assistant', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ query: q })
       });
 

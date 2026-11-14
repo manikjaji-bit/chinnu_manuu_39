@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Complaint } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { getAuthHeaders } from '../utils/api';
 
 interface ResolutionVerificationModalProps {
   complaint: Complaint;
@@ -36,6 +37,7 @@ export const ResolutionVerificationModal: React.FC<ResolutionVerificationModalPr
     try {
       const res = await fetch(`/api/complaints/${complaint.id}/verify-signoff?approved=${approved}`, {
         method: 'POST',
+        headers: getAuthHeaders()
       });
       if (res.ok) {
         onSignoffSuccess();

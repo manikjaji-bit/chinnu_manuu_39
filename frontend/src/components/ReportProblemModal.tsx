@@ -12,6 +12,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { Building, AIAnalysis } from '../types';
+import { getAuthHeaders } from '../utils/api';
 import { AIAnalysisCard } from './AIAnalysisCard';
 import confetti from 'canvas-confetti';
 
@@ -132,6 +133,7 @@ export const ReportProblemModal: React.FC<ReportProblemModalProps> = ({ isOpen, 
 
       const res = await fetch('/api/complaints/submit', {
         method: 'POST',
+        headers: getAuthHeaders(null),
         body: formData
       });
 

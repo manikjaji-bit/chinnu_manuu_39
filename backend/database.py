@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -16,16 +16,42 @@ if os.path.exists(_env_path):
                 if _k and _k not in os.environ:
                     os.environ[_k] = _v
 
-# Database URL defaults to local SQLite file; can be overridden via DATABASE_URL for Postgres/Supabase
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./campus_guardian.db")
-if os.environ.get("VERCEL") and DATABASE_URL.startswith("sqlite"):
-    DATABASE_URL = "sqlite:////tmp/campus_guardian.db"
+# Canonical absolute project root directory
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CANONICAL_DB_PATH = os.path.join(BASE_DIR, "campus_guardian.db").replace("\\", "/")
+
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+
+# Normalize Postgres dialect for SQLAlchemy 2.0 if needed
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+# If no DATABASE_URL or relative SQLite specified, use canonical project root database
+if not DATABASE_URL or DATABASE_URL.startswith("sqlite:///./") or DATABASE_URL == "sqlite:///campus_guardian.db":
+    if os.environ.get("VERCEL"):
+        DATABASE_URL = "sqlite:////tmp/campus_guardian.db"
+    else:
+        DATABASE_URL = f"sqlite:///{CANONICAL_DB_PATH}"
 
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+engine = create_engine(
+    DATABASE_URL,
+    connect_args=connect_args,
+    pool_pre_ping=True
+)
 
+# Enable SQLite WAL (Write-Ahead Logging) and busy timeout for high-concurrency reliability
+if DATABASE_URL.startswith("sqlite"):
+    @event.listens_for(engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA busy_timeout=5000")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.close()
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 def get_db():

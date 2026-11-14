@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole } from '../types';
+import { getAuthHeaders, normalizeRole } from '../utils/api';
 
 interface AuthContextType {
   user: User | null;
@@ -18,25 +19,41 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('cg_token'));
+  const [token, setToken] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('cg_token');
+    } catch {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState<boolean>(true);
 
   const fetchCurrentUser = async (authToken: string) => {
     try {
       const res = await fetch('/api/auth/me', {
-        headers: { Authorization: `Bearer ${authToken}` },
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        },
       });
+
       if (res.ok) {
         const userData = await res.json();
+        // Ensure role is normalized
+        userData.role = normalizeRole(userData.role);
         setUser(userData);
       } else {
-        localStorage.removeItem('cg_token');
+        // Token invalid or expired: clear session
+        try {
+          localStorage.removeItem('cg_token');
+        } catch {}
         setToken(null);
         setUser(null);
       }
     } catch (err) {
-      console.error('Failed to fetch user:', err);
-      localStorage.removeItem('cg_token');
+      console.error('Failed to fetch user session:', err);
+      try {
+        localStorage.removeItem('cg_token');
+      } catch {}
       setToken(null);
       setUser(null);
     } finally {
@@ -50,16 +67,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password: password.trim()
+        }),
       });
+
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || 'Invalid email or password');
+        throw new Error(err.detail || 'Incorrect campus email or password.');
       }
+
       const data = await res.json();
-      localStorage.setItem('cg_token', data.access_token);
+      const normalizedUser = {
+        ...data.user,
+        role: normalizeRole(data.user.role)
+      };
+
+      try {
+        localStorage.setItem('cg_token', data.access_token);
+      } catch {}
+
       setToken(data.access_token);
-      setUser(data.user);
+      setUser(normalizedUser);
     } finally {
       setLoading(false);
     }
@@ -72,21 +102,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          full_name: fullName,
-          email,
-          password,
-          role,
-          department_id: departmentId || null
+          full_name: fullName.trim(),
+          email: email.trim().toLowerCase(),
+          password: password.trim(),
+          role: role.toLowerCase(),
+          department_id: role === 'maintenance' ? (departmentId || 1) : null
         })
       });
+
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || 'Registration failed');
+        throw new Error(err.detail || 'Registration failed. Please check your information.');
       }
+
       const data = await res.json();
-      localStorage.setItem('cg_token', data.access_token);
+      const normalizedUser = {
+        ...data.user,
+        role: normalizeRole(data.user.role)
+      };
+
+      try {
+        localStorage.setItem('cg_token', data.access_token);
+      } catch {}
+
       setToken(data.access_token);
-      setUser(data.user);
+      setUser(normalizedUser);
     } finally {
       setLoading(false);
     }
@@ -95,28 +135,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const demoLogin = async (targetRole: UserRole) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/auth/demo-login/${targetRole}`, {
+      const res = await fetch(`/api/auth/demo-login/${targetRole.toLowerCase()}`, {
         method: 'POST',
       });
-      if (res.ok) {
-        const data = await res.json();
-        localStorage.setItem('cg_token', data.access_token);
-        setToken(data.access_token);
-        setUser(data.user);
-      } else {
+
+      if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || 'Demo login failed');
+        throw new Error(err.detail || `Demo login for ${targetRole} failed.`);
       }
-    } catch (err) {
-      console.error('Demo login error:', err);
-      throw err;
+
+      const data = await res.json();
+      const normalizedUser = {
+        ...data.user,
+        role: normalizeRole(data.user.role)
+      };
+
+      try {
+        localStorage.setItem('cg_token', data.access_token);
+      } catch {}
+
+      setToken(data.access_token);
+      setUser(normalizedUser);
     } finally {
       setLoading(false);
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('cg_token');
+    try {
+      localStorage.removeItem('cg_token');
+    } catch {}
     setToken(null);
     setUser(null);
   };
@@ -135,7 +183,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const role: UserRole = user?.role || 'student';
+  const role: UserRole = normalizeRole(user?.role);
 
   return (
     <AuthContext.Provider

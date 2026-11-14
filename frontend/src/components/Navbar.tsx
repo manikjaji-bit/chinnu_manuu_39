@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { NotificationItem, CampusHealthScore } from '../types';
+import { getAuthHeaders } from '../utils/api';
 
 interface NavbarProps {
   currentTab: 'dashboard' | 'map' | 'analytics';
@@ -31,7 +32,9 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab, onOpenA
 
   const fetchNotifications = async () => {
     try {
-      const res = await fetch('/api/notifications/');
+      const res = await fetch('/api/notifications/', {
+        headers: getAuthHeaders()
+      });
       if (res.ok) {
         const data = await res.json();
         setNotifications(data);
@@ -43,7 +46,9 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab, onOpenA
 
   const fetchHealth = async () => {
     try {
-      const res = await fetch('/api/admin/health-score');
+      const res = await fetch('/api/admin/health-score', {
+        headers: getAuthHeaders()
+      });
       if (res.ok) {
         const data = await res.json();
         setHealthScore(data);
@@ -67,7 +72,10 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab, onOpenA
 
   const markAllRead = async () => {
     try {
-      await fetch('/api/notifications/mark-all-read', { method: 'POST' });
+      await fetch('/api/notifications/mark-all-read', {
+        method: 'POST',
+        headers: getAuthHeaders()
+      });
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
     } catch (e) {
       console.error(e);
