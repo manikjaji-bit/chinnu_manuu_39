@@ -18,6 +18,8 @@ if os.path.exists(_env_path):
 
 # Database URL defaults to local SQLite file; can be overridden via DATABASE_URL for Postgres/Supabase
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./campus_guardian.db")
+if os.environ.get("VERCEL") and DATABASE_URL.startswith("sqlite"):
+    DATABASE_URL = "sqlite:////tmp/campus_guardian.db"
 
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 

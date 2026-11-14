@@ -1,0 +1,8 @@
+{
+  "name": "campus-guardian",
+  "version": "1.0.0",
+  "description": "Campus Guardian - Self-Healing AI Smart Campus Ecosystem",
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build"
+  }
+}
