@@ -31,9 +31,11 @@ export const AdminDashboard: React.FC = () => {
   const [selectedForVerification, setSelectedForVerification] = useState<Complaint | null>(null);
   const [reassignModalComplaint, setReassignModalComplaint] = useState<Complaint | null>(null);
 
-  // Override Form
+  // Override Form & Feedback
   const [overrideDeptId, setOverrideDeptId] = useState<number>(1);
   const [overridePriority, setOverridePriority] = useState<number>(75);
+  const [overrideLoading, setOverrideLoading] = useState<boolean>(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [departments, setDepartments] = useState<any[]>([]);
 
   const fetchAdminData = async () => {
@@ -85,28 +87,58 @@ export const AdminDashboard: React.FC = () => {
     e.preventDefault();
     if (!reassignModalComplaint) return;
 
+    setOverrideLoading(true);
     try {
+      const token = localStorage.getItem('cg_token');
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const res = await fetch(`/api/admin/override-assignment/${reassignModalComplaint.id}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
-          department_id: overrideDeptId,
-          priority_score: overridePriority
+          department_id: Number(overrideDeptId),
+          priority_score: Number(overridePriority)
         })
       });
 
       if (res.ok) {
+        const updated = await res.json();
+        setActiveComplaints(prev => prev.map(c => c.id === updated.id ? { ...c, ...updated } : c));
         setReassignModalComplaint(null);
+        setToastMessage(`Work Order #${reassignModalComplaint.id} override applied successfully!`);
+        setTimeout(() => setToastMessage(null), 4000);
         fetchAdminData();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(`Override failed: ${err.detail || 'Could not update assignment'}`);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      alert(`Network error executing override: ${e.message}`);
+    } finally {
+      setOverrideLoading(false);
     }
   };
 
   return (
     <div className="space-y-6">
       
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="p-3.5 rounded-2xl bg-emerald-950/90 border border-emerald-500/80 text-emerald-200 text-xs font-semibold flex items-center justify-between shadow-lg shadow-emerald-950/50">
+          <span className="flex items-center space-x-2">
+            <span>✓</span>
+            <span>{toastMessage}</span>
+          </span>
+          <button onClick={() => setToastMessage(null)} className="text-emerald-400 hover:text-white font-bold ml-4">✕</button>
+        </div>
+      )}
+
       {/* Top Header & Export Action */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
@@ -324,6 +356,7 @@ export const AdminDashboard: React.FC = () => {
                       <button
                         onClick={() => {
                           setReassignModalComplaint(c);
+                          setOverrideDeptId(c.department_id || (departments.length > 0 ? departments[0].id : 1));
                           setOverridePriority(c.priority_score);
                         }}
                         className="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 text-[11px] font-medium"
@@ -407,9 +440,10 @@ export const AdminDashboard: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl font-bold text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500"
+                  disabled={overrideLoading}
+                  className="px-5 py-2 rounded-xl font-bold text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:opacity-50"
                 >
-                  Confirm Override
+                  {overrideLoading ? 'Updating...' : 'Confirm Override'}
                 </button>
               </div>
             </form>

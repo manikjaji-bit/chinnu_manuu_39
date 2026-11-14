@@ -81,20 +81,40 @@ def override_assignment(
 
     if payload.department_id is not None:
         complaint.department_id = payload.department_id
+        # Also assign technician in new department if present
+        dept_tech = db.query(models.User).filter(
+            models.User.role == "maintenance",
+            models.User.department_id == payload.department_id
+        ).first()
+        if dept_tech and payload.assigned_technician_id is None:
+            complaint.assigned_technician_id = dept_tech.id
+            if complaint.status in ["Submitted", "AI Analysed"]:
+                complaint.status = "Assigned"
+
     if payload.assigned_technician_id is not None:
         complaint.assigned_technician_id = payload.assigned_technician_id
         complaint.status = "Assigned"
+
     if payload.priority_score is not None:
-        complaint.priority_score = payload.priority_score
+        complaint.priority_score = max(0, min(100, payload.priority_score))
+        if complaint.priority_score >= 90:
+            complaint.severity = "Critical"
+        elif complaint.priority_score >= 70:
+            complaint.severity = "High"
+        elif complaint.priority_score >= 40:
+            complaint.severity = "Medium"
+        else:
+            complaint.severity = "Low"
 
     db.commit()
     db.refresh(complaint)
 
     # Notifications
-    if payload.assigned_technician_id:
+    tech_to_notify = payload.assigned_technician_id or complaint.assigned_technician_id
+    if tech_to_notify:
         create_notification(
             db,
-            user_id=payload.assigned_technician_id,
+            user_id=tech_to_notify,
             title="Work Order Reassigned by Admin",
             message=f"Administrator reassigned ticket #{complaint.id} ({complaint.title}) to you. Priority: {complaint.priority_score}/100.",
             type="alert",
